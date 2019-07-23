@@ -1,0 +1,378 @@
+* Background
+Genetics
+
+Ribosome RNA 
+RNA polymers 1 - transcription of ribosome RNA 
+Polymers 2 - tipico -> RNA msg
+18S 5.8S 28S - at the same time
+Believed these genes expressed 
+without regulation — but not true
+Looking at it due to disease of the nucleolus
+STP - enzymes
+LTP - protein synthesis and genetic expression
+Park1 important for LTP, and regulates ribosome RNA -> new ribosomes (Aplisia)
+NO3par blocked ribosomal RNA in mouse = induced LTP -> same effect
+
+Sem file (text) = bam file (binary)
+Bam file also gives info on where it maps on reference genome
+
+Match genome to ribosomal gene
+
+We are not using ref genome; using our own - so need to create index
+
+If match ribosomal genome to full mouse genome — most will not match (only the ribosomal part)
+
+Start with full genome + add some genes and then align to ribosomal genome
+
+Ribosomes link amino acids together in the order specified by messenger RNA (mRNA) molecules. 
+Ribosomal ribonucleic acid (rRNA) is the RNA component of the ribosome, and is essential for protein synthesis in all living organisms. It constitutes the predominant material within the ribosome, which is approximately 60% rRNA and 40% protein by weight
+Ribosomal DNA (rDNA) is a DNA sequence that codes for ribosomal RNA. Ribosomes are assemblies of proteins and rRNA molecules that translate mRNAmolecules to produce proteins. 
+
+Pol 2 main transcriber of DNA -> RNA
+Pol 1 transcribes DNA -> ribosomal RNA
+
+PARP-1 = epigenetic regulator during transcription (DNA -> rRNA)
+
+Activity -> Pol I / PARP-1 -> rRNA -> ribosomes -> protein synth -> LTP
+
+* Software tools
+** Visualization / browser: IGV browser (free) 
+** Alignment: BWA
+Ref genome (bwa)
+Sequences: starting with >name 
+Create once and then can use it many times (need to do this because not using existing ref genome)
+bwa index <ref.fa> [fasta file, text with seq; can have multiple seqs, e.g. for human 23, one per chromosome (~3B)] — create index once
+bwa mem <ref.fa> <read1.fa> <read2.fa> > lane.same
+** Manipulation from alignment files - SAMtools
+Does a lot of stuff
+** GenomeBrowse (Helix)
+Ref genome = DNA
+If not expressed they will not show in RNA reads
+
+Diff rows in DNA = differen isoforms (eg. Different exons) - exist in some cells; can have mixture of isoforms (common) in RNA reads
+White = nothing
+Gray = deletion (introns - not needed for RNA)
+Some RNA is not yet properly spliced (so will show up as green reads where other reads are gray)
+
+Rows = reads
+
+Bottom panel:
+letters= amino acids
+Isoforms can result in different proteins
+
+rRNA has 1 exon; and does not result into proteins
+
+* 29March19 - download data and convert to format 
+** DONE Download rDNA genome 25k bases (BK000964) 
+— https://www.ncbi.nlm.cnih.gov/search/all/?term=BK000964
+- downloaded
+** DONE create index 
+- bwa index [filename]
+** DONE Download read
+- use test reads: https://www.ncbi.nlm.nih.gov/search/all/?term=SRR067634 ; https://trace.ncbi.nlm.nih.gov/Traces/sra/sra.cgi?view=download_reads (fasta or fastq)
+- Illumina whole genome shotgun sequencing of genomic DNA paired-end library 'Solexa-25629' containing sample 'C57BL/6J P38062' from individual 'C57BL/6J'
+- ./fastq-dump SRR067634 
+- ~20Gb ; took ~30 mins to download 
+** DONE create index of read
+- bwa index [filename]
+[BWTIncConstructFromPacked] 1380 iterations done. 13139005176 characters processed.
+[bwt_gen] Finished constructing BWT in 1381 iterations.
+[bwa_index] 7257.08 seconds elapse.
+[bwa_index] Update BWT... 57.85 sec
+[bwa_index] Pack forward-only FASTA... 113.05 sec
+[bwa_index] Construct SA from BWT and Occ... 3250.44 sec
+[main] Version: 0.7.17-r1188
+[main] CMD: ../tools/bwa/bwa index SRR067634.fastq
+[main] Real time: 11236.212 sec; CPU: 10810.418 sec
+
+- >3hours
+** DONE Perform alignment/mapping
+- Paired mapping requires 2 files - bwa mem <ref.fa> <read1.fa> <read2.fa> -> lane.sam — generates sam file about mapping — 
+
+- /data % ../tools/bwa/bwa mem BK000964.fasta SRR067634.fastq > mapping_BK_SRR.sam
+
+[M::bwa_idx_load_from_disk] read 0 ALT contigs
+[M::process] read 49506 sequences (10000212 bp)...
+[M::process] read 49506 sequences (10000212 bp)...
+[M::process] read 49506 sequences (10000212 bp)...
+[M::mem_process_seqs] Processed 49506 reads in 3.837 CPU sec, 3.739 real sec
+...
+[M::mem_process_seqs] Processed 49506 reads in 5.046 CPU sec, 4.938 real sec
+[M::process] read 49506 sequences (10000212 bp)...
+[M::mem_process_seqs] Processed 49506 reads in 4.018 CPU sec, 3.889 real sec
+[M::process] read 48450 sequences (9786900 bp)...
+[M::mem_process_seqs] Processed 49506 reads in 3.960 CPU sec, 3.843 real sec
+[M::mem_process_seqs] Processed 48450 reads in 4.062 CPU sec, 4.011 real sec
+[main] Version: 0.7.17-r1188
+[main] CMD: ../tools/bwa/bwa mem BK000964.fasta SRR067634.fastq
+[main] Real time: 2349.976 sec; CPU: 2424.218 sec
+
+- 40 mins
+** DONE Convert to BAM files (using samtools)
+../tools/samtools/bin/samtools view -bS mapping_BK_SRR.sam > mapping_BK_SRR.bam
+
+** DONE sort bam file 
+../tools/samtools/bin/samtools sort mapping_BK_SRR.bam -o mapping_BK_SRR_sorted.bam
+[bam_sort_core] merging from 16 files and 1 in-memory blocks...
+
+** DONE Generate pileup files using samtools — useful (provides convergence)
+- https://www.biostars.org/p/63429/
+- ../tools/samtools/bin/samtools mpileup -E -uf reference.fa file.bam > file.mpileup
+
+- ../tools/samtools/bin/samtools mpileup -E -uf BK000964.fasta mapping_BK_SRR.bam > BK_SRR.mpileup
+
+ /data % ../tools/samtools/bin/samtools mpileup -E -uf BK000964.fasta mapping_BK_SRR.bam > BK_SRR.mpileup
+[warning] samtools mpileup option `u` is functional, but deprecated. Please switch to using bcftools mpileup in future.
+[mpileup] 1 samples in 1 input files
+[E::bam_plp_push] The input is not sorted (reads out of order)
+
+- ../tools/samtools/bin/samtools mpileup -E -uf BK000964.fasta mapping_BK_SRR_sorted.bam > BK_SRRsorted.mpileup
+[warning] samtools mpileup option `u` is functional, but deprecated. Please switch to using bcftools mpileup in future.
+[mpileup] 1 samples in 1 input files
+
+** DONE index sorted bam file
+- generates .bai file
+- ../tools/bwa/bwa index mapping_BK_SRR_sorted.bam
+
+[bwa_index] Pack FASTA... 75.12 sec
+[bwa_index] Construct BWT for the packed sequence...
+[BWTIncCreate] textLength=64515520, availableWord=16539328
+[BWTIncConstructFromPacked] 10 iterations done. 27281648 characters processed.
+[BWTIncConstructFromPacked] 20 iterations done. 50398784 characters processed.
+[bwt_gen] Finished constructing BWT in 27 iterations.
+[bwa_index] 14.33 seconds elapse.
+[bwa_index] Update BWT... 0.17 sec
+[bwa_index] Pack forward-only FASTA... 73.12 sec
+[bwa_index] Construct SA from BWT and Occ... 7.83 sec
+[main] Version: 0.7.17-r1188
+[main] CMD: ../tools/bwa/bwa index mapping_BK_SRR_sorted.bam
+[main] Real time: 176.866 sec; CPU: 170.578 sec
+
+* 12April19 - analyze data and map to while genome
+** notes
+- ref is 47kbases
+- calculate coverage - supposed to have high coverage
+- look at head of fastq file to see structure
+- 3M bases; 6Gb -> avg coverage of ~2
+- but repeated ~ 200 times; so coverage of ~400
+- in BAM file we would expect 400 coverage; but situtation will be different:
+-- lower coverage of CG regions (tech reasons) -- 3 hydrogen bonds instead of 2
+-- might have deletions+mutations so software might not map it correctly
+- ivan: if coverage is broken need to change 1st step - reverse transcription
+- oleg: feeling will have relatively good coverage; if issues will be due to mutations (polymorphisms)
+-- losing some reads - bioinformatics problem - cannot map
+-- various solutions - need to localize problem first
+-- nobody has good info about rRNA because some are so different they are not mapped anywhere
+- new technique can get almost full chromosome; instead of 150 bases here and there
+** oleg email
+Maybe I need to articulate our first goal better.
+
+We would like to characterize polymorphisms in three rRNA genes in the most popular mouse strain. Surprisingly, it was never done before in any strain, and in any species, including humans. Thus, such characterization probably is quite substantial achievement, probably deserving a publication by itself.
+
+Formally speaking characterization of polymorphisms is pileups, that’s it. Salvador may have it already by now. There are a few caveats though, and one of them is that we did not do alignment to the right genome. Properly (according to common opinion) it should be done to a genome, which contains whole reference genome with the repeated region added. The reason is that there could be reads, which better mapped to other parts of genome, but with absence of that they will wrongly find a place on the rDNA repeat. I know for a fact that the difference is negligible if exist (I did that), but eventually we still need to do it properly. The reason I wanted to start with repeat only is that it is much, much faster and easier, and will give us almost perfect picture of what is going on.
+
+I also talked about other potential issues related to coverage. After addressing them we have our first goal achieved.
+
+I hope it adds some clarity to what we are doing, although it takes more time and work to comprehend the task.
+** DONE inspect coverage
+- can visualize with visualization tool
+- but for math analysis use pileup 
+-- avg and variation of coverage
+
+** email to oleg/ivan (23Apr19)
+Hi Oleg and Ivan,
+
+I’ve done the steps we discussed, but not sure how to do the last step of inspecting/analyzing the coverage.
+
+These are the steps I’ve completed:
+
+1) Downloaded reference genome (BK000964) and reads (SRR067634) 
+
+2) bwa index SRR067634.fastq
+
+3) bwa mem BK000964.fasta SRR067634.fastq > mapping_BK_SRR.sam
+
+4) samtools view -bS mapping_BK_SRR.sam > mapping_BK_SRR.bam
+
+5) samtools sort mapping_BK_SRR.bam -o mapping_BK_SRR_sorted.bam
+
+6) samtools mpileup -E -uf BK000964.fasta mapping_BK_SRR_sorted.bam > BK_SRRsorted.mpileup
+
+7) bwa index mapping_BK_SRR_sorted.bam
+
+I then tried to visualize the coverage in GenomeBrowse, but couldn’t open the pileup file. I was able to open the mapping_BK_SRR_sorted.bam file in GenomeBrowse, and it automatically tried to generate a “Coverage” and “Pile-up” file, but after a while gave the following error: "Unable to match data in this source with an existing reference sequence. Reference sequence must have matching chromosome names and lengths."
+
+I also tried to open the .bam file in IGV but it didn’t show anything.
+
+I’ve been searching how to do the statistic analysis of coverage from the pileup file but haven’t found anything too clear — would this be using SAMtools as well?
+
+I could have a quick meeting tomorrow (any time except 11.30-12.30am), Thursday (all day) and/or Friday (before 1pm).
+
+Salva 
+
+** TODO map to whole mouse genome + 45k file (future)
+- shouldn't make much difference
+- but it's rigth way to go
+- will take longer
+- need to use gcloud -- in parallel
+- leave it for later 
+
+** Notes for next steps
+- we dont need 45kb; only 3 genes
+- we have RNA from them - RNA only comes from these 3 pieces
+- rRNA is synthesized
+- express a different of variance leads to memory vs no memoery -- different variance expressed
+- find what kind of variance have in DNA -- supposed to have all variacne (with and without memorizing)
+- make a catalog of this
+- take 1 gene - look at how polymorphic a gene is (eg 121 bases)
+-- create a table
+-- 121 columns, 1 of the 4 letters (% of each)
+-- most will be 99%
+-- represents polymorphic content
+
+- problems:
+-- cannot deal with deletions and insertions
+-- 2 similar polymorphic sites -- always come in pairs?
+-- so 2 different variants of the gene, or 4 variants of the gene?
+-- could go down from 1000 to 10 variants
+-- partially resolvable
+
+** TODO create table of polymorphisms 
+*** DONE 1) locate where genes start and finish 
+-- he'll do it and give coordinates:
+
+Positions of rRNA genes within sequenced mouse rRNA repeat region, which you used as “genome” for mapping, are described in GenBank record for this sequence (with other features within this sequence):
+https://www.ncbi.nlm.nih.gov/nuccore/BK000964
+Look for feature called “rRNA”; there are three of them:
+/product="18S ribosomal RNA", positions 4008..5877
+/product="5.8S ribosomal RNA", positions 6878..7034
+/product="28S ribosomal RNA", positions 8123..12852
+ 
+*** DONE 2) take mpileup file and create table
+-- create script to read; should be easy
+-- python code: https://www.biostars.org/p/344555/
+
+-- installed pysam - https://pysam.readthedocs.io/en/latest/api.html
+-- can't read mpileup - binary file??
+-- samtools doc: http://www.htslib.org/doc/samtools.html
+-- trying: ../tools/samtools/bin/samtools mpileup -E -f BK000964.fasta mapping_BK_SRR_sorted.bam > BK_SRRsorted_v2.mpileup
+-- seemed to work - now can read, and have coverage for each line
+
+**** using vcf (wrong - not enough info)
+-- CHECK THIS!!!!! -- https://www.biostars.org/p/343591/ 
+(need to install bcftools)
+
+In the first step - called mpileup - samtools will generate information about each single position of the reference sequence. This contains how many reads cover this site, if the base on the position matches the reference and what's the quality for each base.
+
+Based on this information bcftools calldecide in a second step on which position it will have a closer look if there is a variant. To decide if there is a variant more critera than only the number of reads that support the variant and the base quality are needed. For example the mapping quality, the position within the read, compare those metrics between read that support the reference and those supporting the variant, ...
+
+In the current version of samtools/bcftools like this:
+
+$ bcftools mpileup -Ou -f reference.fa aln.sorted.bam  | bcftools call -mv > call.vcf
+
+bcftools mpileup -Ou -f BK000964.fasta mapping_BK_SRR_sorted.bam  | bcftools call -mv > BK_SRR_sorted_v3.vcf
+
+**** using mpileup
+- vcf files filter data with low quality -- cannot make vcf with different threshold of quality
+- mpileup files - 
+ .= same 
+ ,= complementary (C-G coming from opposite strand)
+ letters = quality -- look up
+
+- important to have coverage and all raw data for all reads -- so use mpileup
+
+**** mpileup format
+- find information of mpileup format and what everything means
+-- http://samtools.sourceforge.net/pileup.shtml 
+-- https://en.wikipedia.org/wiki/Pileup_format
+-- http://comailab.genomecenter.ucdavis.edu/index.php/Mpileup
+
+- The columns: Each line consists of 5 (or optionally 6) tab-separated columns:
+1. Sequence identifier
+2. Position in sequence (starting from 1)
+3. Reference nucleotide at that position
+4. Number of aligned reads covering that position (depth of coverage)
+5. Bases at that position from aligned reads
+6. Phred Quality of those bases, represented in ASCII with -33 offset (OPTIONAL)
+
+- Column 5: The bases string:
+. (dot) means a base that matched the reference on the forward strand
+, (comma) means a base that matched the reference on the reverse strand
+</> (less-/greater-than sign) denotes a reference skip. This occurs, for example, if a base in the reference genome is intronic and a read maps to two flanking exons. If quality scores are given in a sixth column, they refer to the quality of the read and not the specific base.
+AGTCN denotes a base that did not match the reference on the forward strand
+agtcn denotes a base that did not match the reference on the reverse strand
+A sequence matching the regular expression \+[0-9]+[ACGTNacgtn]+ denotes an insertion of one or more bases starting from the next position
+A sequence matching the regular expression -[0-9]+[ACGTNacgtn]+ denotes a deletion of one or more bases starting from the next position
+^ (caret) marks the start of a read segment and the ASCII of the character following `^' minus 33 gives the mapping quality
+$ (dollar) marks the end of a read segment
+(asterisk) is a placeholder for a deleted base in a multiple basepair deletion that was mentioned in a previous line by the -[0-9]+[ACGTNacgtn]+ notation
+
+- Column 6: The base quality string
+This is an optional column. If present, the ASCII value of the character minus 33 gives the mapping Phred quality of each of the bases in the previous column 5. This is similar to quality encoding in the FASTQ format.
+
+**** output format of mpileup_parser_v2.py
+
+BK000964.3	2	C	C_100.0	.	.	147
+BK000964.3	3	T	T_100.0	.	.	149
+BK000964.3	4	G	G_100.0	.	.	149
+BK000964.3	5	A	A_100.0	.	.	152
+BK000964.3	6	C	C_100.0	.	.	153
+BK000964.3	7	A	A_99.35	G_0.64	.	155
+BK000964.3	8	C	C_100.0	.	.	156
+BK000964.3	9	G	G_99.36	A_0.63	.	158
+BK000964.3	10	C	C_100.0	.	.	159
+
+**** DONE desired output format
+- tab delimited so can read in excel
+
+Seq | location | ref base | A % | G % | C % | T % | Coverage (num reads)  
+
+BK000964.3	2	C	C_100.0	.	.	147
+BK000964.3	3	T	T_100.0	.	.	149
+BK000964.3	4	G	G_100.0	.	.	149
+
+- single-nucleotide polymorphisms
+- simple deletins
+
+**** DONE modify script to enable threshold argument
+- only include bases whose quality is above %threshold (average)
+- also individually
+
+
+*** DONE 3) look at quality 
+./mpileup-parser-v3.py -f ../data/BK_SRRsorted_v2.mpileup -t 4 -s 4008 -e 5877
+
+-- every base in seq has a quality = prob of error
+-- only take into account if quality > threshold (30 or 25)
+-- so 2 or tables: 1 for all, 1 for 25 threshold, 1 for 30 threshold
+
+- scientific issues:
+-- coverage (sometimes too high of coverage, eg 25k, so mapping to multiple similar regions)
+-- can fix by using more files
+
+*** DONE do thresholding by invididual bases
+- 40 - no chance of mistake
+- 10 - probably wrong
+*** TODO visualize
+- histogram with colors by bases
+use vcf file in igv? - similar to screenshot
+- check if very high coverage
+*** DONE email ling
+- asks for account to charge
+*** TODO parametrize by coverage
+*** TODO parametrize by % polymorphism
+threshold plymorphisms by >1% (make parametric) (ref base <99%)
+
+*** TODO use new read data (from swetha)
+- data file name?
+
+**  meeting 10July2019
+- check fastqc to check avg quality
+TODO: threshold plymorphisms by >1% (make parametric) (ref base <99%)
+TODO: visualization - use vcf file in igv? - similar to screenshot
+TODO: use full genome  
+-- if can use computing power 
+-- bwa and samtools can specify num cores)
+-- gsutil to upload big files
+-- sftp via ssh
+TODO: use new read data (from sweetha)
