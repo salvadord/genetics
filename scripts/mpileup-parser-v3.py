@@ -294,7 +294,7 @@ t1 =  datetime.datetime.now()
 try: 
    filename = opt.file
    f = open(filename)
-   outputFile = 'parsed_locs-%d-%d_threshold-%d_%.1f'%(loc_start, loc_end, SQ_threshold, poly_threshold)+filename.split('/')[-1]
+   outputFile = 'parsed_locs-%d-%d_threshold-%d_%.1f_'%(loc_start, loc_end, SQ_threshold, poly_threshold)+filename.split('/')[-1]
    o = open(outputFile,'w')
 except:
    parser.error("Please check your command line paramters with -h or --help")
