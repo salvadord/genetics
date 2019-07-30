@@ -64,7 +64,7 @@ rRNA has 1 exon; and does not result into proteins
 
 * 29March19 - download data and convert to format 
 ** DONE Download rDNA genome 25k bases (BK000964) 
-— https://www.ncbi.nlm.cnih.gov/search/all/?term=BK000964
+— https://www.ncbi.nlm.nih.gov/search/all/?term=BK000964
 - downloaded
 ** DONE create index 
 - bwa index [filename]
@@ -360,11 +360,16 @@ use vcf file in igv? - similar to screenshot
 *** DONE email ling
 - asks for account to charge
 *** TODO parametrize by coverage
-*** TODO parametrize by % polymorphism
+*** DONE parametrize by % polymorphism
 threshold plymorphisms by >1% (make parametric) (ref base <99%)
 
 *** TODO use new read data (from swetha)
 - data file name?
+- downloaded file from: https://basespace.illumina.com/sample/271627677/G27trim (~2GB)
+
+This is the reads data; now need to map to rRNA and then to whole genome (DNA) 
+
+
 
 **  meeting 10July2019
 - check fastqc to check avg quality

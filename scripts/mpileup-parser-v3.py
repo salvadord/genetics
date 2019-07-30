@@ -253,12 +253,12 @@ class MyThread (multiprocessing.Process):
                     writeRow = False
                     print('Row discarded since no polymorphisms identified (threshold = %.1f%%'%(poly_threshold))
 
-                    scan += [aPer, cPer, gPer, tPer, delper]
-                    print(scan)
-                    scan[bases.index(refbase)] = matchPer
+                scan += [aPer, cPer, gPer, tPer, delper]
+                print(scan)
+                scan[bases.index(refbase)] = matchPer
 
-                    result += ['%.2f'%(per) for per in scan]
-                    result += [str(total_HQ)]
+                result += ['%.2f'%(per) for per in scan]
+                result += [str(total_HQ)]
 
                 #   print('quals: ', quals)
                 #   print(Tt_HQ, tPer)
@@ -364,4 +364,3 @@ print outputFile
 print "Bases:\t"+str(bases)
 now = time.time()-start
 print int(now/60), int(now%60)
-
