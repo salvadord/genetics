@@ -79,6 +79,7 @@ def vcfAnalysis():
     print('\n\nproduct="28S ribosomal RNA", positions 8123..12852:\n')
     dataPos = filterVCFByPos(data, [8123, 12852])
 
+
 def runCommand(command):
     import subprocess
     proc = subprocess.Popen(command.split(' '), 
@@ -87,6 +88,48 @@ def runCommand(command):
     stdout,stderr = proc.communicate()
     print(stdout)
     print(stderr)
+
+def createIndex(filename):
+    print('Creating index ... ' % (filename))
+    runCommand('../tools/bwa/bwa index %s'%(filename))
+
+def alignReadToRef(read, ref):
+    print('Aligning read %s to ref %s ...' % (read, ref))
+    outFile = 'mapping_%s_%s.sam' % (ref.split['.'][0], read.split['.'][0])
+    runCommand('../tools/bwa/bwa mem %s %s  > %s' % (ref, read, outFile))
+    return outFile
+
+def convertSamToBam(sam):
+    print('Converting %s to .bam ...' % (sam))
+    bam = sam.split['.'][0]+'.bam'
+    runCommand('../tools/samtools/bin/samtools view -bS %s > %s' % (sam, bam))
+    return bam
+
+def sortBam(bam):
+    print('Sorting %s ...' % (bam))
+    sortedBam = bam.split['.'][0] + '_sorted.bam'
+    runCommand('../tools/samtools/bin/samtools sort %s -o %s' % (bam, sortedBam))
+    return sortedBam
+
+def generateMpileup(ref, sortedBam):
+    print('Generating mpileup for %s using ref %s ...'% (sortedBam, ref))
+    mpileup = sortedBam.split['.'][0] + '.mpileup'
+    runCommand('bcftools mpileup -Ou %s %s > %s' % (ref, sortedBam, mpileup))
+    return mpileup
+
+    # deprecated
+    # .. / tools / samtools / bin / samtools mpileup - E - uf BK000964.fasta mapping_BK_SRR_sorted.bam > BK_SRRsorted.mpileup
+    
+    # other useful preprocessing?
+    # $ bcftools mpileup -Ou QMg-NbQ3P-RN.fasta aln_P1O1.sorted.bam | bcftools call -Ou -mv  | bcftools norm -Ou -f QMg-NbQ3P-RN.fasta | bcftools view -e 'FORMAT/DP > 100' > P1O1_var.flt.vcf
+
+def preProcessReadRef(read, ref):
+    createIndex(read)
+    sam = alignReadToRef(read, ref)
+    bam = convertSamToBam(sam)
+    sortedBam = sortBam(bam)
+    mpileup = generateMpileup(ref, sortedBam)
+    return mpileup
 
 
 def mpileupAnalysis(inputFile,
@@ -107,8 +150,14 @@ def mpileupAnalysis(inputFile,
 # MAIN SCRIPT
 # ------------------------------------------------------------------
 
-# params
-inputFile = '../data/BK_SRRsorted_v2.mpileup'
+# Align reads to ref seq
+read = '../data/BK000964.fasta'
+ref = '../data/rDNA-137410281/G27trim-271627677/G27_S41_L001_R1_001.fastq.gz'
+mpileup = preProcessReadRef(read, ref)
+
+# Calculate polymorphisms
+## params
+inputFile = mpileup  #'../data/BK_SRRsorted_v2.mpileup'
 positions = [[4008, 5877], # /product="18S ribosomal RNA", positions 4008..5877
             [6878, 7034],  # /product="5.8S ribosomal RNA", positions 6878..7034
             [8123, 12852]]  # /product="28S ribosomal RNA", positions 8123..12852
@@ -117,5 +166,5 @@ quality_thresholds = [20, 25, 30]
 poly_threshold = 1.0
 threads = 4
 
-# call func
+## call func
 mpileupAnalysis(inputFile, positions, quality_thresholds, poly_threshold, threads)
