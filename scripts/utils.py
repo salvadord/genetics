@@ -90,30 +90,30 @@ def runCommand(command):
     print(stderr)
 
 def createIndex(filename):
-    print('Creating index ... ' % (filename))
+    print('Creating index for %s ... ' % (filename))
     runCommand('../tools/bwa/bwa index %s'%(filename))
 
 def alignReadToRef(read, ref):
     print('Aligning read %s to ref %s ...' % (read, ref))
-    outFile = 'mapping_%s_%s.sam' % (ref.split['.'][0], read.split['.'][0])
+    outFile = 'mapping_%s_%s.sam' % (ref.split('.')[0], read.split('.')[0])
     runCommand('../tools/bwa/bwa mem %s %s  > %s' % (ref, read, outFile))
     return outFile
 
 def convertSamToBam(sam):
     print('Converting %s to .bam ...' % (sam))
-    bam = sam.split['.'][0]+'.bam'
+    bam = sam.split('.')[0]+'.bam'
     runCommand('../tools/samtools/bin/samtools view -bS %s > %s' % (sam, bam))
     return bam
 
 def sortBam(bam):
     print('Sorting %s ...' % (bam))
-    sortedBam = bam.split['.'][0] + '_sorted.bam'
+    sortedBam = bam.split('.')[0] + '_sorted.bam'
     runCommand('../tools/samtools/bin/samtools sort %s -o %s' % (bam, sortedBam))
     return sortedBam
 
 def generateMpileup(ref, sortedBam):
     print('Generating mpileup for %s using ref %s ...'% (sortedBam, ref))
-    mpileup = sortedBam.split['.'][0] + '.mpileup'
+    mpileup = sortedBam.split('.')[0] + '.mpileup'
     runCommand('bcftools mpileup -Ou %s %s > %s' % (ref, sortedBam, mpileup))
     return mpileup
 
@@ -144,15 +144,13 @@ def mpileupAnalysis(inputFile,
             command = './mpileup-parser-v3.py -f %s -t %s -q %s -s %d -e %d -p %f' % (inputFile, threads, q, pos[0], pos[1], poly_threshold)
             runCommand(command)
 
-#rDNA - 137410281
-
 # ------------------------------------------------------------------
 # MAIN SCRIPT
 # ------------------------------------------------------------------
 
 # Align reads to ref seq
-read = '../data/BK000964.fasta'
-ref = '../data/rDNA-137410281/G27trim-271627677/G27_S41_L001_R1_001.fastq.gz'
+ref = '../data/BK000964.fasta'
+read = '../data/rDNA-137410281/G27trim-271627677/G27_S41_L001_R1_001.fastq.gz'
 mpileup = preProcessReadRef(read, ref)
 
 # Calculate polymorphisms
